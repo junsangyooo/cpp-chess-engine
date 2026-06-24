@@ -285,13 +285,13 @@ void Gui::notify() {
    
 }
 
-Gui::Gui(std::shared_ptr<Chess> chess): chess{chess}, xw{240, 280} {
+Gui::Gui(std::shared_ptr<Chess> chess): chess{chess.get()}, xw{240, 280} {
     notify();
 }
 
 
 
 Gui::~Gui() {
+    // Non-owning observer: nothing to release (see Cli::~Cli).
     chess = nullptr;
-    chess->detach("Gui");
 }

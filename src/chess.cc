@@ -385,8 +385,10 @@ bool Chess::validPawn(std::shared_ptr<Move> movement, bool whiteTurn, char promo
     Position new_posn = movement->getNew();
     char captured = board->charAt(new_posn);
     char piece = board->charAt(org_posn);
-    bool firstMove;
-    bool atTheEdge;
+    // Initialize both flags: the per-piece branches below only set one of them,
+    // leaving the other with an indeterminate value (undefined behavior when read).
+    bool firstMove = false;
+    bool atTheEdge = false;
     if (piece == 'p') {
         if (10 <= org_posn && org_posn <= 17) {
             firstMove = true;

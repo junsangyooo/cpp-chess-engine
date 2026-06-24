@@ -90,11 +90,13 @@ void Cli::notify() {
     std::cout << "  abcdefgh" << std::endl;
 }
 
-Cli::Cli(std::shared_ptr<Chess> chess): chess{chess} {
+Cli::Cli(std::shared_ptr<Chess> chess): chess{chess.get()} {
     notify();
 }
 
 Cli::~Cli() {
+    // Non-owning observer: nothing to release. (Previously this dereferenced a
+    // nulled pointer via chess->detach, and the shared_ptr cycle meant the
+    // destructor never even ran.)
     chess = nullptr;
-    chess->detach("Cli");
 }

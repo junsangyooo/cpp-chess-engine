@@ -17,7 +17,8 @@
 enum Position;
 
 class Gui: public Observer {
-    std::shared_ptr<Chess> chess;
+    // Non-owning pointer to the subject (see Cli for the cycle-avoidance rationale).
+    Chess* chess;
     Xwindow xw;
     void drawKing(int col, int row, char piece);
     void drawQueen(int col, int row, char piece);
