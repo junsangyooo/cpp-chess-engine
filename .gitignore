@@ -1,0 +1,14 @@
+# Build artifacts
+*.o
+*.d
+src/chess
+chess
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+
+# macOS / OS files
+.DS_Store
+Thumbs.db

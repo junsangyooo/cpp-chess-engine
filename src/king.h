@@ -15,7 +15,7 @@ public:
     bool getFirstMove() const override {return firstMove;}
     void setFirstMove(bool value) override {firstMove = value;}
     void setWhenFirstMove(int value) override {whenFirstMove = value;}
-    int getWhenFirstMove() {return whenFirstMove;}
+    int getWhenFirstMove() override {return whenFirstMove;}
     int getValue() const override {return value;}
 };
 

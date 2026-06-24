@@ -1,30 +1,39 @@
-#include "level4.h"
+#include "level5.h"
 
-// Level 4 AI: negamax search with alpha-beta pruning, depth 2, material-only
-// evaluation. Unlike Levels 1-3 (which are 1-ply heuristics), this actually
-// looks ahead at the opponent's best reply before committing to a move.
-//
-// Design constraint: do NOT modify the engine. All hypothetical moves are
-// played on the Board with Board::move / Board::undo (exactly the pattern
-// Level2/Level3 use to test a move), and legality is checked through the
-// existing Chess::validMove. Only the final chosen move is committed via
-// Chess::movePiece, which handles castling / en passant / promotion correctly.
+// Level 5 AI: the strongest computer player. Negamax with alpha-beta pruning
+// (engine untouched — all look-ahead via Board::move/undo), searching one ply
+// deeper than Level 4 and scoring positions with material + a piece-square
+// table (rewards central control) + pawn advancement. Captures are searched
+// first (move ordering) to make the alpha-beta cutoffs more effective so the
+// deeper search stays fast enough.
 
-static const int SEARCH_DEPTH = 2;
+static const int SEARCH_DEPTH = 3;
 static const int MATE_SCORE = 1000000;
 
-LevelFour::LevelFour(std::shared_ptr<Chess> chess, bool side, std::shared_ptr<Board> bd): chess{chess}, whiteSide{side}, board{bd} {}
+// Central-control bonus per square (symmetric for both colors). Center squares
+// are worth more than the edges/corners.
+static const int PST[8][8] = {
+    {0, 0, 1, 1, 1, 1, 0, 0},
+    {0, 1, 1, 2, 2, 1, 1, 0},
+    {1, 1, 2, 3, 3, 2, 1, 1},
+    {1, 2, 3, 4, 4, 3, 2, 1},
+    {1, 2, 3, 4, 4, 3, 2, 1},
+    {1, 1, 2, 3, 3, 2, 1, 1},
+    {0, 1, 1, 2, 2, 1, 1, 0},
+    {0, 0, 1, 1, 1, 1, 0, 0},
+};
 
-LevelFour::~LevelFour() {
+LevelFive::LevelFive(std::shared_ptr<Chess> chess, bool side, std::shared_ptr<Board> bd): chess{chess}, whiteSide{side}, board{bd} {}
+
+LevelFive::~LevelFive() {
     chess = nullptr;
     board = nullptr;
 }
 
-// All pseudo-legal-and-legal moves for `side`. Legality (including "does not
-// leave own king in check") is delegated to Chess::validMove. Each returned
-// Move carries its captured piece so Board::undo can restore the board exactly.
-std::vector<std::shared_ptr<Move>> LevelFour::generateMoves(bool side) {
-    std::vector<std::shared_ptr<Move>> moves;
+// Legal moves for `side`, captures first (better alpha-beta move ordering).
+std::vector<std::shared_ptr<Move>> LevelFive::generateMoves(bool side) {
+    std::vector<std::shared_ptr<Move>> captures;
+    std::vector<std::shared_ptr<Move>> quiets;
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             Position org = Position(i * 10 + j);
@@ -40,41 +49,46 @@ std::vector<std::shared_ptr<Move>> LevelFour::generateMoves(bool side) {
                     char tgt = board->charAt(dst);
                     if (tgt != ' ' && tgt != '-') {
                         m->setCaptured(board->getPiece(dst));
+                        captures.emplace_back(m);
+                    } else {
+                        quiets.emplace_back(m);
                     }
-                    moves.emplace_back(m);
                 }
             }
         }
     }
-    return moves;
+    captures.insert(captures.end(), quiets.begin(), quiets.end());
+    return captures;
 }
 
-// Material balance from `side`'s point of view (positive = good for `side`).
-int LevelFour::evaluate(bool side) {
+// Material + positional score from `side`'s point of view.
+int LevelFive::evaluate(bool side) {
     int score = 0;
     for (int i = 0; i < 8; ++i) {
         for (int j = 0; j < 8; ++j) {
             Position p = Position(i * 10 + j);
             char c = board->charAt(p);
             if (c == ' ' || c == '-') continue;
-            int v = board->getValue(p);
-            if ('A' <= c && c <= 'Z') score += v;
-            else score -= v;
+            int v = board->getValue(p) * 10; // scale material above positional terms
+            int positional = PST[i][j];
+            if (c == 'P') positional += (7 - i);      // white pawns advance upward (row 0)
+            else if (c == 'p') positional += i;        // black pawns advance downward (row 7)
+            if ('A' <= c && c <= 'Z') score += v + positional;
+            else score -= v + positional;
         }
     }
     return side ? score : -score;
 }
 
-int LevelFour::negamax(int depth, int alpha, int beta, bool side) {
+int LevelFive::negamax(int depth, int alpha, int beta, bool side) {
     if (depth == 0) return evaluate(side);
 
     std::vector<std::shared_ptr<Move>> moves = generateMoves(side);
     if (moves.empty()) {
-        // No legal move: checkmate (very bad) or stalemate (neutral).
         bool inCheck = side ? (chess->whiteInCheck() != "")
                             : (chess->blackInCheck() != "");
-        if (inCheck) return -MATE_SCORE - depth; // prefer being mated later
-        return 0;                                 // stalemate
+        if (inCheck) return -MATE_SCORE - depth;
+        return 0;
     }
 
     int best = -MATE_SCORE * 2;
@@ -84,12 +98,12 @@ int LevelFour::negamax(int depth, int alpha, int beta, bool side) {
         board->undo(m);
         if (val > best) best = val;
         if (best > alpha) alpha = best;
-        if (alpha >= beta) break; // alpha-beta cutoff
+        if (alpha >= beta) break;
     }
     return best;
 }
 
-bool LevelFour::makeMove() {
+bool LevelFive::makeMove() {
     std::vector<std::shared_ptr<Move>> moves = generateMoves(whiteSide);
     if (moves.empty()) return false;
 
@@ -108,9 +122,6 @@ bool LevelFour::makeMove() {
         if (bestVal > alpha) alpha = bestVal;
     }
 
-    // Commit the chosen move through the engine so special moves are handled
-    // correctly. Use a fresh Move (the search copy may still hold a captured
-    // pointer); detect pawn promotion by the destination rank.
     Position org = best->getOrg();
     Position dst = best->getNew();
     char pc = board->charAt(org);

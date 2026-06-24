@@ -15,7 +15,7 @@ public:
     bool getPromoted() const override {return promoted;}
     void setPromoted(bool value) override {promoted = value;}
     void setWhenPromoted(int value) override {whenPromoted = value;}
-    int getWhenPromoted() {return whenPromoted;}
+    int getWhenPromoted() override {return whenPromoted;}
     int getValue() const override {return value;}
 };
 

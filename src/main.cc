@@ -18,6 +18,7 @@
 #include "level2.h"
 #include "level3.h"
 #include "level4.h"
+#include "level5.h"
 
 enum Position;
 
@@ -155,6 +156,9 @@ int main() {
             } else if (player1 == "computer4") {
                 player1IsComputer = true;
                 computerOne = std::make_shared<LevelFour>(chess, true, board);
+            } else if (player1 == "computer5") {
+                player1IsComputer = true;
+                computerOne = std::make_shared<LevelFive>(chess, true, board);
             }
             if (player1IsComputer){
                 control->setComputerWhite(computerOne);
@@ -172,6 +176,9 @@ int main() {
             } else if (player2 == "computer4") {
                 player2IsComputer = true;
                 computerTwo = std::make_shared<LevelFour>(chess, false, board);
+            } else if (player2 == "computer5") {
+                player2IsComputer = true;
+                computerTwo = std::make_shared<LevelFive>(chess, false, board);
             }
             if (player2IsComputer) {
                 control->setComputerBlack(computerTwo);

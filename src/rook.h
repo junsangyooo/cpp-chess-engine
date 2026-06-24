@@ -19,9 +19,9 @@ public:
     bool getPromoted() const override {return promoted;}
     void setPromoted(bool value) override {promoted = value;}
     void setWhenPromoted(int value) override {whenPromoted = value;}
-    int getWhenPromoted() {return whenPromoted;}
+    int getWhenPromoted() override {return whenPromoted;}
     void setWhenFirstMove(int value) override {whenFirstMove = value;}
-    int getWhenFirstMove() {return whenFirstMove;}
+    int getWhenFirstMove() override {return whenFirstMove;}
     int getValue() const override {return value;}
 };
 
